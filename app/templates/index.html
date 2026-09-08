@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Arcane Panel — داشبورد{% endblock %}
+{% block content %}
+<div x-data="dashboard()" x-init="init()" class="min-h-screen">
+    <header class="glass-card neon-border m-4 p-4 flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-4">
+            <h1 class="font-display text-2xl font-bold neon-text-blue">ARCANE</h1>
+            <span class="text-cyber-blue text-sm">v{{ version }}</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="text-gray-400 text-sm">خوش آمدید، <span class="text-cyber-green" x-text="username"></span></span>
+            <button @click="logout" class="cyber-btn cyber-btn-red text-sm">خروج</button>
+        </div>
+    </header>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mx-4 mb-4">
+        <div class="glass-card neon-border p-6">
+            <div class="text-cyber-blue text-sm mb-2">کل کاربران</div>
+            <div class="font-display text-3xl font-bold neon-text-blue" x-text="users.length"></div>
+        </div>
+        <div class="glass-card neon-border-green p-6">
+            <div class="text-cyber-green text-sm mb-2">فعال</div>
+            <div class="font-display text-3xl font-bold neon-text-green" x-text="activeUsers"></div>
+        </div>
+        <div class="glass-card neon-border-pink p-6">
+            <div class="text-cyber-pink text-sm mb-2">مصرف کل</div>
+            <div class="font-display text-2xl font-bold neon-text-pink" x-text="formatBytes(totalTraffic)"></div>
+        </div>
+        <div class="glass-card neon-border p-6">
+            <div class="text-cyber-blue text-sm mb-2">وضعیت Xray</div>
+            <div class="font-display text-lg font-bold" :class="xrayStatus === 'running' ? 'neon-text-green' : 'neon-text-pink'" x-text="xrayStatus === 'running' ? '● فعال' : '○ غیرفعال'"></div>
+        </div>
+    </div>
+    <div class="mx-4 mb-4 flex gap-4 flex-wrap">
+        <button @click="openCreateModal" class="cyber-btn cyber-btn-green">+ کاربر جدید</button>
+        <button @click="openSettingsModal" class="cyber-btn">⚙️ تنظیمات</button>
+        <button @click="refreshUsers" class="cyber-btn">بروزرسانی</button>
+    </div>
+    <div class="glass-card neon-border mx-4 mb-4 overflow-x-auto">
+        <table class="cyber-table">
+            <thead>
+                <tr>
+                    <th>نام</th><th>UUID</th><th>مصرف</th><th>وضعیت</th><th>انقضا</th><th>عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-if="users.length === 0">
+                    <tr><td colspan="6" class="text-center py-8 text-gray-500">هیچ کاربری وجود ندارد.</td></tr>
+                </template>
+                <template x-for="user in users" :key="user.uid">
+                    <tr>
+                        <td class="font-semibold" x-text="user.name"></td>
+                        <td>
+                            <code class="text-xs text-cyber-blue" x-text="user.uuid.substring(0, 8) + '...'"></code>
+                            <button @click="copyToClipboard(user.uuid)" class="text-cyber-green text-xs mr-2 hover:underline">کپی</button>
+                        </td>
+                        <td><span class="text-cyber-green" x-text="formatBytes((user.used_bytes_up || 0) + (user.used_bytes_down || 0))"></span></td>
+                        <td>
+                            <span class="px-2 py-1 rounded text-xs" :class="user.enabled ? 'bg-cyber-green/20 text-cyber-green' : 'bg-cyber-red/20 text-cyber-red'" x-text="user.enabled ? 'فعال' : 'غیرفعال'"></span>
+                        </td>
+                        <td class="text-sm" x-text="user.expires_at ? formatDate(user.expires_at) : '—'"></td>
+                        <td>
+                            <div class="flex gap-2 flex-wrap">
+                                <button @click="copyToClipboard('/sub/' + user.uid)" class="text-cyber-green hover:underline text-sm">لینک</button>
+                                <button @click="openEditModal(user)" class="text-cyber-blue hover:underline text-sm">ویرایش</button>
+                                <button @click="rotateUUID(user.uid)" class="text-cyber-yellow hover:underline text-sm">چرخش</button>
+                                <button @click="deleteUser(user.uid)" class="text-cyber-red hover:underline text-sm">حذف</button>
+                            </div>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- User Modal -->
+    <div x-show="showModal" x-transition class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" @click.self="closeModal">
+        <div class="glass-card neon-border-pink p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h2 class="font-display text-2xl font-bold neon-text-pink mb-6" x-text="editingUser ? 'ویرایش کاربر' : 'کاربر جدید'"></h2>
+            <form @submit.prevent="submitUser" class="space-y-4">
+                <div>
+                    <label class="block text-cyber-blue text-sm font-semibold mb-2">نام</label>
+                    <input type="text" x-model="formData.name" class="cyber-input w-full" required maxlength="64">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-cyber-blue text-sm font-semibold mb-2">حداکثر حجم (GB)</label>
+                        <input type="number" x-model="formData.max_gb" class="cyber-input w-full" step="0.1" min="0">
+                    </div>
+                    <div>
+                        <label class="block text-cyber-blue text-sm font-semibold mb-2">تعداد درخواست</label>
+                        <input type="number" x-model="formData.max_requests" class="cyber-input w-full" min="0">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-cyber-blue text-sm font-semibold mb-2">حداکثر اتصال همزمان</label>
+                        <input type="number" x-model="formData.max_connections" class="cyber-input w-full" min="0">
+                    </div>
+                    <div>
+                        <label class="block text-cyber-blue text-sm font-semibold mb-2">قفل IP</label>
+                        <input type="text" x-model="formData.ip_lock" class="cyber-input w-full" placeholder="192.168.1.1">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-cyber-blue text-sm font-semibold mb-2">یادداشت</label>
+                    <textarea x-model="formData.note" class="cyber-input w-full" rows="2"></textarea>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" x-model="formData.enabled" id="enabled" class="w-4 h-4">
+                    <label for="enabled" class="text-cyber-blue text-sm">فعال</label>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="cyber-btn cyber-btn-green flex-1"><span x-text="editingUser ? 'بروزرسانی' : 'ایجاد'"></span></button>
+                    <button type="button" @click="closeModal" class="cyber-btn cyber-btn-red flex-1">انصراف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div x-show="showSettingsModal" x-transition class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" @click.self="closeSettingsModal">
+        <div class="glass-card neon-border p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <h2 class="font-display text-2xl font-bold neon-text-blue mb-6">تنظیمات پیشرفته</h2>
+            <form @submit.prevent="submitSettings" class="space-y-4">
+                <div>
+                    <label class="block text-cyber-blue text-sm font-semibold mb-2">پروتکل انتقال</label>
+                    <select x-model="settingsForm.transport" class="cyber-input w-full">
+                        <option value="ws">WebSocket</option>
+                        <option value="xhttp">XHTTP</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-cyber-blue text-sm font-semibold mb-2">Fingerprint</label>
+                    <select x-model="settingsForm.fingerprint" class="cyber-input w-full">
+                        <option value="chrome">Chrome</option>
+                        <option value="firefox">Firefox</option>
+                        <option value="edge">Edge</option>
+                        <option value="ios">iOS</option>
+                        <option value="random">Random</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-cyber-blue text-sm font-semibold mb-2">دامنه عمومی (برای لینک اشتراک)</label>
+                    <input type="text" x-model="settingsForm.public_domain" class="cyber-input w-full" placeholder="example.com">
+                </div>
+                <div class="border-t border-cyber-blue/20 pt-4">
+                    <h3 class="text-cyber-pink font-semibold mb-4">Fragment (برای دور زدن DPI)</h3>
+                    <div class="flex items-center gap-2 mb-4">
+                        <input type="checkbox" x-model="settingsForm.fragment_enabled" id="fragment_enabled" class="w-4 h-4">
+                        <label for="fragment_enabled" class="text-cyber-blue text-sm">فعال</label>
+                    </div>
+                    <div x-show="settingsForm.fragment_enabled" class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-cyber-blue text-xs mb-1">Length</label>
+                            <input type="text" x-model="settingsForm.fragment_length" class="cyber-input w-full text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-cyber-blue text-xs mb-1">Interval</label>
+                            <input type="text" x-model="settingsForm.fragment_interval" class="cyber-input w-full text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-cyber-blue text-xs mb-1">Packets</label>
+                            <input type="text" x-model="settingsForm.fragment_packets" class="cyber-input w-full text-sm">
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="cyber-btn cyber-btn-green flex-1">ذخیره</button>
+                    <button type="button" @click="closeSettingsModal" class="cyber-btn cyber-btn-red flex-1">انصراف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function dashboard() {
+    return {
+        username: 'admin', users: [], xrayStatus: 'stopped',
+        showModal: false, showSettingsModal: false, editingUser: null,
+        formData: { name: '', max_gb: null, max_requests: null, max_connections: null, ip_lock: '', note: '', enabled: true },
+        settingsForm: { transport: 'ws', fingerprint: 'chrome', public_domain: '', fragment_enabled: true, fragment_length: '10-30', fragment_interval: '10-20', fragment_packets: 'tlshello' },
+        get activeUsers() { return this.users.filter(u => u.enabled).length; },
+        get totalTraffic() { return this.users.reduce((sum, u) => sum + (u.used_bytes_up || 0) + (u.used_bytes_down || 0), 0); },
+        async init() {
+            await this.refreshUsers();
+            try {
+                const status = await api('/api/xray/status');
+                this.xrayStatus = status.status;
+            } catch (e) {}
+            try {
+                const s = await api('/api/settings');
+                this.settingsForm = { ...this.settingsForm, ...s.settings };
+            } catch (e) {}
+        },
+        async refreshUsers() {
+            try { const data = await api('/api/users'); this.users = data.users; } catch (e) {}
+        },
+        openCreateModal() {
+            this.editingUser = null;
+            this.formData = { name: '', max_gb: null, max_requests: null, max_connections: null, ip_lock: '', note: '', enabled: true };
+            this.showModal = true;
+        },
+        openEditModal(user) {
+            this.editingUser = user;
+            this.formData = {
+                name: user.name, max_gb: user.max_gb, max_requests: user.max_requests,
+                max_connections: user.max_connections, ip_lock: user.ip_lock || '',
+                note: user.note || '', enabled: !!user.enabled,
+            };
+            this.showModal = true;
+        },
+        closeModal() { this.showModal = false; this.editingUser = null; },
+        closeSettingsModal() { this.showSettingsModal = false; },
+        async submitUser() {
+            try {
+                if (this.editingUser) {
+                    await api(`/api/users/${this.editingUser.uid}`, { method: 'PUT', body: JSON.stringify(this.formData) });
+                    showToast('کاربر بروزرسانی شد', 'success');
+                } else {
+                    await api('/api/users', { method: 'POST', body: JSON.stringify(this.formData) });
+                    showToast('کاربر ایجاد شد', 'success');
+                }
+                this.closeModal(); await this.refreshUsers();
+            } catch (e) {}
+        },
+        async submitSettings() {
+            try {
+                await api('/api/settings', { method: 'PUT', body: JSON.stringify(this.settingsForm) });
+                showToast('تنظیمات ذخیره شد', 'success');
+                this.closeSettingsModal();
+            } catch (e) {}
+        },
+        async deleteUser(uid) {
+            if (!confirm('آیا مطمئن هستید؟')) return;
+            try { await api(`/api/users/${uid}`, { method: 'DELETE' }); showToast('کاربر حذف شد', 'success'); await this.refreshUsers(); } catch (e) {}
+        },
+        async rotateUUID(uid) {
+            if (!confirm('لینک‌های قبلی بی‌اعتبار می‌شوند. ادامه می‌دهید؟')) return;
+            try { await api(`/api/users/${uid}/rotate`, { method: 'POST' }); showToast('UUID چرخش شد', 'success'); await this.refreshUsers(); } catch (e) {}
+        },
+        async logout() {
+            try { await api('/api/logout', { method: 'POST' }); window.location.href = '/login'; } catch (e) {}
+        }
+    };
+}
+</script>
+{% endblock %}

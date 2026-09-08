@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Arcane Panel — ورود{% endblock %}
+{% block content %}
+<div x-data="loginForm()" class="min-h-screen flex items-center justify-center p-4">
+    <div class="glass-card neon-border p-8 max-w-md w-full">
+        <div class="text-center mb-8">
+            <h1 class="font-display text-4xl font-bold neon-text-blue mb-2">ARCANE</h1>
+            <p class="text-cyber-blue text-sm tracking-widest">SECURE LOGIN</p>
+        </div>
+        <form @submit.prevent="submitLogin" class="space-y-6">
+            <div>
+                <label class="block text-cyber-blue text-sm font-semibold mb-2 tracking-wide">نام کاربری</label>
+                <input type="text" x-model="username" class="cyber-input w-full" placeholder="admin" required autocomplete="username">
+            </div>
+            <div>
+                <label class="block text-cyber-blue text-sm font-semibold mb-2 tracking-wide">رمز عبور</label>
+                <input :type="showPassword ? 'text' : 'password'" x-model="password" class="cyber-input w-full" placeholder="••••••••••••" required autocomplete="current-password">
+                <button type="button" @click="showPassword = !showPassword" class="text-cyber-blue text-xs mt-1 hover:underline">
+                    <span x-text="showPassword ? 'مخفی کن' : 'نمایش بده'"></span>
+                </button>
+            </div>
+            <button type="submit" :disabled="loading" class="cyber-btn w-full" :class="{ 'opacity-50 cursor-not-allowed': loading }">
+                <span x-show="!loading">ورود به پنل</span>
+                <span x-show="loading" class="flex items-center justify-center gap-2">
+                    <div class="cyber-spinner w-5 h-5 border-2"></div>
+                    در حال احراز هویت...
+                </span>
+            </button>
+        </form>
+        <div class="mt-6 p-4 bg-cyber-bg-light border border-cyber-pink rounded">
+            <p class="text-cyber-pink text-xs leading-relaxed">
+                🔒 <strong>محافظت فعال:</strong> ۵ تلاش ناموفق = قفل ۱۵ دقیقه‌ای IP
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function loginForm() {
+    return {
+        username: '', password: '', showPassword: false, loading: false,
+        async submitLogin() {
+            this.loading = true;
+            try {
+                await api('/api/login', { method: 'POST', body: JSON.stringify({ username: this.username, password: this.password }) });
+                showToast('ورود موفقیت‌آمیز!', 'success');
+                setTimeout(() => window.location.href = '/', 500);
+            } catch (error) {} finally { this.loading = false; }
+        }
+    };
+}
+</script>
+{% endblock %}

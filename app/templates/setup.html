@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Arcane Panel — راه‌اندازی{% endblock %}
+{% block content %}
+<div x-data="setupForm()" class="min-h-screen flex items-center justify-center p-4">
+    <div class="glass-card neon-border p-8 max-w-md w-full">
+        <div class="text-center mb-8">
+            <h1 class="font-display text-4xl font-bold neon-text-blue mb-2">ARCANE</h1>
+            <p class="text-cyber-blue text-sm tracking-widest">PANEL SETUP</p>
+        </div>
+        <form @submit.prevent="submitSetup" class="space-y-6">
+            <div>
+                <label class="block text-cyber-blue text-sm font-semibold mb-2 tracking-wide">نام کاربری</label>
+                <input type="text" x-model="username" class="cyber-input w-full" placeholder="admin" required minlength="3" maxlength="32" pattern="[a-zA-Z0-9_]+">
+            </div>
+            <div>
+                <label class="block text-cyber-blue text-sm font-semibold mb-2 tracking-wide">رمز عبور</label>
+                <input :type="showPassword ? 'text' : 'password'" x-model="password" class="cyber-input w-full" placeholder="••••••••••••" required minlength="12">
+                <button type="button" @click="showPassword = !showPassword" class="text-cyber-blue text-xs mt-1 hover:underline">
+                    <span x-text="showPassword ? 'مخفی کن' : 'نمایش بده'"></span>
+                </button>
+            </div>
+            <div x-show="password.length > 0" class="space-y-2">
+                <div class="flex gap-1">
+                    <div class="h-1 flex-1 rounded" :class="strength >= 1 ? 'bg-cyber-red' : 'bg-gray-700'"></div>
+                    <div class="h-1 flex-1 rounded" :class="strength >= 2 ? 'bg-cyber-yellow' : 'bg-gray-700'"></div>
+                    <div class="h-1 flex-1 rounded" :class="strength >= 3 ? 'bg-cyber-blue' : 'bg-gray-700'"></div>
+                    <div class="h-1 flex-1 rounded" :class="strength >= 4 ? 'bg-cyber-green' : 'bg-gray-700'"></div>
+                </div>
+                <p class="text-xs" :class="strengthColor" x-text="strengthText"></p>
+            </div>
+            <div>
+                <label class="block text-cyber-blue text-sm font-semibold mb-2 tracking-wide">تکرار رمز عبور</label>
+                <input :type="showPassword ? 'text' : 'password'" x-model="confirmPassword" class="cyber-input w-full" placeholder="••••••••••••" required>
+            </div>
+            <button type="submit" :disabled="loading || !isValid" class="cyber-btn w-full" :class="{ 'opacity-50 cursor-not-allowed': loading || !isValid }">
+                <span x-show="!loading">ایجاد ادمین</span>
+                <span x-show="loading" class="flex items-center justify-center gap-2">
+                    <div class="cyber-spinner w-5 h-5 border-2"></div>
+                    در حال پردازش...
+                </span>
+            </button>
+        </form>
+        <div class="mt-6 p-4 bg-cyber-bg-light border border-cyber-pink rounded">
+            <p class="text-cyber-pink text-xs leading-relaxed">
+                🔒 <strong>توجه امنیتی:</strong> حداقل ۱۲ کاراکتر شامل حروف بزرگ، کوچک، اعداد و کاراکترهای خاص.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function setupForm() {
+    return {
+        username: '', password: '', confirmPassword: '', showPassword: false, loading: false,
+        get strength() {
+            let score = 0;
+            if (this.password.length >= 12) score++;
+            if (/[a-z]/.test(this.password) && /[A-Z]/.test(this.password)) score++;
+            if (/[0-9]/.test(this.password)) score++;
+            if (/[!@#$%^&*()\-_=+\[\]{}|;:,.<>?]/.test(this.password)) score++;
+            return score;
+        },
+        get strengthText() { return ['خیلی ضعیف', 'ضعیف', 'متوسط', 'قوی', 'بسیار قوی'][this.strength]; },
+        get strengthColor() { return ['text-cyber-red', 'text-cyber-red', 'text-cyber-yellow', 'text-cyber-blue', 'text-cyber-green'][this.strength]; },
+        get isValid() {
+            return this.username.length >= 3 && this.password.length >= 12 && 
+                   this.password === this.confirmPassword && this.strength >= 3;
+        },
+        async submitSetup() {
+            if (!this.isValid) return;
+            this.loading = true;
+            try {
+                await api('/api/setup', { method: 'POST', body: JSON.stringify({ username: this.username, password: this.password }) });
+                showToast('ادمین با موفقیت ایجاد شد!', 'success');
+                setTimeout(() => window.location.href = '/', 1000);
+            } catch (error) {} finally { this.loading = false; }
+        }
+    };
+}
+</script>
+{% endblock %}

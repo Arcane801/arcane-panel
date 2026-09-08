@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{% block title %}Arcane Panel{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="/static/css/cyberpunk.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'cyber-bg': '#0a0e27',
+                        'cyber-bg-light': '#141937',
+                        'cyber-blue': '#00f0ff',
+                        'cyber-pink': '#ff00ff',
+                        'cyber-green': '#00ff9d',
+                        'cyber-yellow': '#f0ff00',
+                        'cyber-red': '#ff0055',
+                    },
+                    fontFamily: {
+                        'display': ['Orbitron', 'sans-serif'],
+                        'body': ['Rajdhani', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-cyber-bg text-gray-200 font-body min-h-screen overflow-x-hidden">
+    <div class="cyber-grid"></div>
+    <div class="scan-line"></div>
+    <div class="relative z-10">
+        {% block content %}{% endblock %}
+    </div>
+    <div id="toast-container" class="fixed top-4 left-4 z-50 space-y-2"></div>
+    <script src="/static/js/app.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

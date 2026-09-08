@@ -1,0 +1,59 @@
+/* Arcane Panel — Cyberpunk Theme */
+.cyber-grid {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-image: linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: grid-move 20s linear infinite;
+    pointer-events: none; z-index: 1;
+}
+@keyframes grid-move { 0% { background-position: 0 0; } 100% { background-position: 50px 50px; } }
+.scan-line {
+    position: fixed; top: 0; left: 0; width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.5), transparent);
+    animation: scan 8s linear infinite;
+    pointer-events: none; z-index: 2;
+}
+@keyframes scan { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+.neon-border { border: 1px solid rgba(0, 240, 255, 0.3); box-shadow: 0 0 10px rgba(0, 240, 255, 0.2), inset 0 0 10px rgba(0, 240, 255, 0.05); }
+.neon-border-pink { border: 1px solid rgba(255, 0, 255, 0.3); box-shadow: 0 0 10px rgba(255, 0, 255, 0.2), inset 0 0 10px rgba(255, 0, 255, 0.05); }
+.neon-border-green { border: 1px solid rgba(0, 255, 157, 0.3); box-shadow: 0 0 10px rgba(0, 255, 157, 0.2), inset 0 0 10px rgba(0, 255, 157, 0.05); }
+.neon-text-blue { color: #00f0ff; text-shadow: 0 0 5px #00f0ff, 0 0 10px #00f0ff, 0 0 20px #00f0ff; }
+.neon-text-pink { color: #ff00ff; text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 20px #ff00ff; }
+.neon-text-green { color: #00ff9d; text-shadow: 0 0 5px #00ff9d, 0 0 10px #00ff9d, 0 0 20px #00ff9d; }
+.glass-card { background: rgba(20, 25, 55, 0.7); backdrop-filter: blur(10px); border-radius: 8px; }
+.cyber-btn {
+    position: relative; padding: 0.75rem 1.5rem;
+    font-family: 'Orbitron', sans-serif; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    border: 2px solid #00f0ff; background: transparent; color: #00f0ff;
+    cursor: pointer; transition: all 0.3s ease; overflow: hidden;
+}
+.cyber-btn:hover { background: rgba(0, 240, 255, 0.1); box-shadow: 0 0 20px rgba(0, 240, 255, 0.5); transform: translateY(-2px); }
+.cyber-btn-pink { border-color: #ff00ff; color: #ff00ff; }
+.cyber-btn-pink:hover { background: rgba(255, 0, 255, 0.1); box-shadow: 0 0 20px rgba(255, 0, 255, 0.5); }
+.cyber-btn-green { border-color: #00ff9d; color: #00ff9d; }
+.cyber-btn-green:hover { background: rgba(0, 255, 157, 0.1); box-shadow: 0 0 20px rgba(0, 255, 157, 0.5); }
+.cyber-btn-red { border-color: #ff0055; color: #ff0055; }
+.cyber-btn-red:hover { background: rgba(255, 0, 85, 0.1); box-shadow: 0 0 20px rgba(255, 0, 85, 0.5); }
+.cyber-input {
+    background: rgba(10, 14, 39, 0.8); border: 1px solid rgba(0, 240, 255, 0.3);
+    color: #00f0ff; padding: 0.75rem 1rem;
+    font-family: 'Rajdhani', sans-serif; font-size: 1rem; transition: all 0.3s ease;
+}
+.cyber-input:focus { outline: none; border-color: #00f0ff; box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
+.cyber-input::placeholder { color: rgba(0, 240, 255, 0.4); }
+.cyber-spinner { width: 40px; height: 40px; border: 3px solid rgba(0, 240, 255, 0.2); border-top-color: #00f0ff; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.toast { padding: 1rem 1.5rem; border-radius: 4px; font-family: 'Rajdhani', sans-serif; font-weight: 500; animation: slideIn 0.3s ease-out; min-width: 300px; }
+.toast-success { background: rgba(0, 255, 157, 0.1); border: 1px solid #00ff9d; color: #00ff9d; box-shadow: 0 0 20px rgba(0, 255, 157, 0.3); }
+.toast-error { background: rgba(255, 0, 85, 0.1); border: 1px solid #ff0055; color: #ff0055; box-shadow: 0 0 20px rgba(255, 0, 85, 0.3); }
+.toast-info { background: rgba(0, 240, 255, 0.1); border: 1px solid #00f0ff; color: #00f0ff; box-shadow: 0 0 20px rgba(0, 240, 255, 0.3); }
+@keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: rgba(10, 14, 39, 0.5); }
+::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.3); border-radius: 4px; }
+.cyber-table { width: 100%; border-collapse: collapse; }
+.cyber-table th { background: rgba(0, 240, 255, 0.1); border-bottom: 2px solid #00f0ff; padding: 1rem; text-align: right; font-family: 'Orbitron', sans-serif; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: #00f0ff; }
+.cyber-table td { padding: 1rem; border-bottom: 1px solid rgba(0, 240, 255, 0.1); }
+.cyber-table tr:hover { background: rgba(0, 240, 255, 0.05); }
