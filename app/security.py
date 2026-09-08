@@ -33,35 +33,24 @@ login_limiter = RateLimiter(max_requests=10, window_seconds=60)
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
+        
+        # Security headers
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-XSS-Protection"] = "0"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = (
-            "camera=(), microphone=(), geolocation=(), interest-cohort=()"
-        )
-        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
-        response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
-        if request.url.scheme == "https":
-            response.headers["Strict-Transport-Security"] = (
-                "max-age=31536000; includeSubDomains; preload"
-            )
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "img-src 'self' data:; "
-            "font-src 'self' data: https://fonts.gstatic.com; "
-            "connect-src 'self'; "
-            "frame-ancestors 'none'; "
-            "base-uri 'self'; "
-            "form-action 'self'"
+            "font-src 'self' https://fonts.gstatic.com; "
+            "frame-ancestors 'none';"
         )
-   # Remove server fingerprinting (safe deletion)
-   if "server" in response.headers:
-       del response.headers["server"]
-   if "x-powered-by" in response.headers:
-       del response.headers["x-powered-by"]
+        
+        if request.url.scheme == "https":
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains; preload"
+            )
+        
         return response
 
 
@@ -70,6 +59,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         from .auth import get_client_ip
         ip = get_client_ip(request)
         path = request.url.path
+        
         if path == "/api/login":
             allowed, retry_after = login_limiter.is_allowed(ip)
             if not allowed:
@@ -86,4 +76,5 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     status_code=429,
                     headers={"Retry-After": str(retry_after)},
                 )
+        
         return await call_next(request)
