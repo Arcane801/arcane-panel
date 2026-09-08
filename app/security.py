@@ -57,8 +57,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "base-uri 'self'; "
             "form-action 'self'"
         )
-        response.headers.pop("server", None)
-        response.headers.pop("x-powered-by", None)
+   # Remove server fingerprinting (safe deletion)
+   if "server" in response.headers:
+       del response.headers["server"]
+   if "x-powered-by" in response.headers:
+       del response.headers["x-powered-by"]
         return response
 
 
