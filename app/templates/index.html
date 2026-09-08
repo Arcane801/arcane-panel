@@ -63,7 +63,7 @@
                         <td class="text-sm" x-text="user.expires_at ? formatDate(user.expires_at) : '—'"></td>
                         <td>
                             <div class="flex gap-2 flex-wrap">
-                                <button @click="copyToClipboard('/sub/' + user.uid)" class="text-cyber-green hover:underline text-sm">لینک</button>
+                                <button @click="copyConfig(user)" class="text-cyber-green hover:underline text-sm">کانفیگ</button>
                                 <button @click="openEditModal(user)" class="text-cyber-blue hover:underline text-sm">ویرایش</button>
                                 <button @click="rotateUUID(user.uid)" class="text-cyber-yellow hover:underline text-sm">چرخش</button>
                                 <button @click="deleteUser(user.uid)" class="text-cyber-red hover:underline text-sm">حذف</button>
@@ -143,6 +143,14 @@
                     </select>
                 </div>
                 <div>
+                    <label class="block text-cyber-blue text-sm font-semibold mb-2">ALPN</label>
+                    <input type="text" x-model="settingsForm.alpn" class="cyber-input w-full" placeholder="http/1.1">
+                </div>
+                <div>
+                    <label class="block text-cyber-blue text-sm font-semibold mb-2">SNI Override (اختیاری)</label>
+                    <input type="text" x-model="settingsForm.sni_override" class="cyber-input w-full" placeholder="example.com">
+                </div>
+                <div>
                     <label class="block text-cyber-blue text-sm font-semibold mb-2">دامنه عمومی (برای لینک اشتراک)</label>
                     <input type="text" x-model="settingsForm.public_domain" class="cyber-input w-full" placeholder="example.com">
                 </div>
@@ -199,6 +207,8 @@ function dashboard() {
         settingsForm: {
             transport: 'ws',
             fingerprint: 'chrome',
+            alpn: 'http/1.1',
+            sni_override: '',
             public_domain: '',
             fragment_enabled: true,
             fragment_length: '10-30',
@@ -207,6 +217,7 @@ function dashboard() {
         },
         get activeUsers() { return this.users.filter(u => u.enabled).length; },
         get totalTraffic() { return this.users.reduce((sum, u) => sum + (u.used_bytes_up || 0) + (u.used_bytes_down || 0), 0); },
+        
         async init() {
             await this.refreshUsers();
             try {
@@ -218,14 +229,17 @@ function dashboard() {
                 this.settingsForm = { ...this.settingsForm, ...s.settings };
             } catch (e) {}
         },
+        
         async refreshUsers() {
             try { const data = await api('/api/users'); this.users = data.users; } catch (e) {}
         },
+        
         openCreateModal() {
             this.editingUser = null;
             this.formData = { name: '', max_gb: null, max_requests: null, max_connections: null, ip_lock: '', note: '', enabled: true };
             this.showModal = true;
         },
+        
         openEditModal(user) {
             this.editingUser = user;
             this.formData = {
@@ -235,9 +249,11 @@ function dashboard() {
             };
             this.showModal = true;
         },
+        
         closeModal() { this.showModal = false; this.editingUser = null; },
         openSettingsModal() { this.showSettingsModal = true; },
         closeSettingsModal() { this.showSettingsModal = false; },
+        
         async submitUser() {
             try {
                 if (this.editingUser) {
@@ -250,6 +266,7 @@ function dashboard() {
                 this.closeModal(); await this.refreshUsers();
             } catch (e) {}
         },
+        
         async submitSettings() {
             try {
                 await api('/api/settings', { method: 'PUT', body: JSON.stringify(this.settingsForm) });
@@ -257,16 +274,53 @@ function dashboard() {
                 this.closeSettingsModal();
             } catch (e) {}
         },
+        
         async deleteUser(uid) {
             if (!confirm('آیا مطمئن هستید؟')) return;
             try { await api(`/api/users/${uid}`, { method: 'DELETE' }); showToast('کاربر حذف شد', 'success'); await this.refreshUsers(); } catch (e) {}
         },
+        
         async rotateUUID(uid) {
             if (!confirm('لینک‌های قبلی بی‌اعتبار می‌شوند. ادامه می‌دهید؟')) return;
             try { await api(`/api/users/${uid}/rotate`, { method: 'POST' }); showToast('UUID چرخش شد', 'success'); await this.refreshUsers(); } catch (e) {}
         },
+        
         async logout() {
             try { await api('/api/logout', { method: 'POST' }); window.location.href = '/login'; } catch (e) {}
+        },
+        
+        generateVlessConfig(user) {
+            const domain = this.settingsForm.public_domain || window.location.hostname;
+            const port = 443;
+            const type = this.settingsForm.transport || 'ws';
+            const security = 'tls';
+            const sni = this.settingsForm.sni_override || domain;
+            const fp = this.settingsForm.fingerprint || 'chrome';
+            const alpn = this.settingsForm.alpn || 'http/1.1';
+            
+            let params = `type=${type}&security=${security}&sni=${encodeURIComponent(sni)}&fp=${fp}&alpn=${encodeURIComponent(alpn)}`;
+            
+            if (type === 'ws') {
+                params += `&path=/vl-ws&host=${encodeURIComponent(domain)}`;
+            } else if (type === 'xhttp') {
+                params += `&path=/vl-xhttp&mode=packet-up`;
+            }
+            
+            if (this.settingsForm.fragment_enabled) {
+                const fragLength = this.settingsForm.fragment_length || '10-30';
+                const fragPackets = this.settingsForm.fragment_packets || 'tlshello';
+                const fragInterval = this.settingsForm.fragment_interval || '10-20';
+                params += `&fragment=${fragLength},${fragPackets},${fragInterval}`;
+            }
+            
+            const name = encodeURIComponent(user.name);
+            return `vless://${user.uuid}@${domain}:${port}?${params}#${name}`;
+        },
+        
+        copyConfig(user) {
+            const config = this.generateVlessConfig(user);
+            copyToClipboard(config);
+            showToast('کانفیگ کپی شد!', 'success');
         }
     };
 }
